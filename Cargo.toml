@@ -8,3 +8,6 @@ git = "https://github.com/SergioBenitez/Rocket"
 
 [dependencies.rocket_codegen]
 git = "https://github.com/SergioBenitez/Rocket"
+
+[dependencies.postgres]
+git = "https://github.com/sfackler/rust-postgres.git"
