@@ -1,0 +1,7 @@
+Built using rust nightly
+
+See this for setup of cross-compilation:
+
+https://users.rust-lang.org/t/static-cross-build-for-arm/9100/2
+
+in particular, a dynamic linked binary was giving my pi complaints about glibc so I used the static build instead

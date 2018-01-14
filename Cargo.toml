@@ -3,4 +3,8 @@ name = "momo_wallet"
 version = "0.1.0"
 authors = ["km42 <kurtmueller42@gmail.com>"]
 
-[dependencies]
+[dependencies.rocket]
+git = "https://github.com/SergioBenitez/Rocket"
+
+[dependencies.rocket_codegen]
+git = "https://github.com/SergioBenitez/Rocket"
