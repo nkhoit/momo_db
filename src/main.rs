@@ -26,6 +26,7 @@ fn load_from_did(d_id: i64, conn: Connection) -> Identity {
   let mut pkey: Option<String> = None;
   if rows.len() == 0 {
       println!("Creating new identity for discord id {}", d_id);
+    // TODO make new
     //  &conn.query("insert into wlt_id (momo_bal) values (0.0) returning id");
   } else {
       let row = rows.get(0);
@@ -45,6 +46,10 @@ fn load_from_did(d_id: i64, conn: Connection) -> Identity {
   }
 }
 
+fn update_balance(ident: Identity, conn: Connection) {
+    let up = &conn.execute("update wlt_id set balance = $1 where id = $2", &[&ident.balance, &ident.id]).unwrap();
+}
+
 /**
  * End of IdentityService
  */
@@ -53,14 +58,15 @@ fn load_from_did(d_id: i64, conn: Connection) -> Identity {
 #[get("/discord/<id>")]
 fn balance_by_id(id: i64) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
-    let mut balance = 0.0;
-    let mut found : bool = false;
-    for row in &conn.query("SELECT momo_bal FROM wlt_id WHERE id=$1", &[&id]).unwrap() {
-        balance = row.get("momo_bal");
-        found = true;
-        println!("Queried and got {}", balance);
-    }
-    format!("{}", balance)
+    let ident: Identity = load_from_did(id, conn);
+    format!("{}", ident.balance)
+}
+
+// Alter balance by discord id by amount delta.
+// Returns the remaining balance on the account
+#[post("/discord/<id>/<delta>")]
+fn add_by_id(id: i64, delta: f64) -> String{
+    format!("{}", 0.0)
 }
 
 // get balance by stellar public key
