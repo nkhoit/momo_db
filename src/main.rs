@@ -20,14 +20,19 @@ struct Identity {
 
 // Loads identity associated with the discord id. If none exists, create one.
 fn load_from_did(d_id: i64, conn: Connection) -> Identity {
-  let rows = &conn.query("select * from wlt_id cross join discord_user where wlt_id.id = discord_user.wlt_id", &[&d_id]).unwrap();
+  let rows = &conn.query("select * from wlt_id cross join discord_user where wlt_id.id = discord_user.wlt_id and discord_user.id = $1", &[&d_id]).unwrap();
   let mut id: i64 = 0;
   let mut balance: f64 = 0.0;
   let mut pkey: Option<String> = None;
   if rows.len() == 0 {
       println!("Creating new identity for discord id {}", d_id);
     // TODO make new
-    //  &conn.query("insert into wlt_id (momo_bal) values (0.0) returning id");
+      let rows2 = &conn.query("insert into wlt_id (momo_bal) values (0.0) returning id", &[]).unwrap();
+      let row = rows2.get(0);
+      id = row.get(0);
+      // TODO check for error on "successful" and freak out or something
+      let successful = &conn.execute("insert into discord_user (id, wlt_id) values ($1, $2)", &[&d_id, &id]);
+      balance = 0.0;
   } else {
       let row = rows.get(0);
       id = row.get(0);
