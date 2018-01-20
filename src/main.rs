@@ -19,7 +19,7 @@ struct Identity {
  */
 
 // Loads identity associated with the discord id. If none exists, create one.
-fn load_from_did(d_id: i64, conn: Connection) -> Identity {
+fn load_from_did(d_id: i64, conn: &Connection) -> Identity {
   let rows = &conn.query("select * from wlt_id cross join discord_user where wlt_id.id = discord_user.wlt_id and discord_user.id = $1", &[&d_id]).unwrap();
   let mut id: i64 = 0;
   let mut balance: f64 = 0.0;
@@ -51,8 +51,8 @@ fn load_from_did(d_id: i64, conn: Connection) -> Identity {
   }
 }
 
-fn update_balance(ident: Identity, conn: Connection) {
-    let up = &conn.execute("update wlt_id set balance = $1 where id = $2", &[&ident.balance, &ident.id]).unwrap();
+fn update_balance(ident: Identity, conn: &Connection, new_balance: f64) {
+    let up = &conn.execute("update wlt_id set momo_bal = $1 where id = $2", &[&new_balance, &ident.id]).unwrap();
 }
 
 /**
@@ -63,7 +63,7 @@ fn update_balance(ident: Identity, conn: Connection) {
 #[get("/discord/<id>")]
 fn balance_by_id(id: i64) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
-    let ident: Identity = load_from_did(id, conn);
+    let ident: Identity = load_from_did(id, &conn);
     format!("{}", ident.balance)
 }
 
@@ -71,7 +71,11 @@ fn balance_by_id(id: i64) -> String {
 // Returns the remaining balance on the account
 #[post("/discord/<id>/<delta>")]
 fn add_by_id(id: i64, delta: f64) -> String{
-    format!("{}", 0.0)
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    let ident: Identity = load_from_did(id, &conn);
+    let new_balance : f64 = ident.balance + delta;
+    update_balance(ident, &conn, new_balance);
+    format!("Success")
 }
 
 // get balance by stellar public key
@@ -82,6 +86,6 @@ fn balance_by_key(pkey: String) -> String {
 
 
 fn main() {
-    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key])
+    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, add_by_id])
                     .launch();
 }
