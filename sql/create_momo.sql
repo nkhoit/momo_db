@@ -47,3 +47,7 @@ create table extl_tx_log(
   /* MOMO going user -> mimibot, or negative the MOMO going mimibot -> user */
   delta double precision
 );
+
+create table api_key(
+  key bigint primary key
+);
