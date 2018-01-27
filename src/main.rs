@@ -78,6 +78,22 @@ fn add_by_id(id: i64, delta: f64) -> String{
     format!("Success")
 }
 
+#[post("/discord/tip/<from_id>/<to_id>/<delta>")]
+fn tip_user(from_id: i64, to_id: i64, delta: f64) -> String {
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    let from_ident: Identity = load_from_did(from_id, &conn);
+    let to_ident: Identity = load_from_did(to_id, &conn);
+    if (&from_ident.balance < &delta) && (&delta > &0.0) {
+        format!("Failure")
+    } else {
+        let new_from_balance : f64 = from_ident.balance - delta;
+        update_balance(from_ident, &conn, new_from_balance);
+        let new_to_balance : f64 = to_ident.balance + delta;
+        update_balance(to_ident, &conn, new_to_balance);
+        format!("{{ \"balance\" : {}}}", new_from_balance)
+    }
+}
+
 // get balance by stellar public key
 #[get("/key/<pkey>")]
 fn balance_by_key(pkey: String) -> String {
@@ -86,6 +102,6 @@ fn balance_by_key(pkey: String) -> String {
 
 
 fn main() {
-    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, add_by_id])
+    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user])
                     .launch();
 }
