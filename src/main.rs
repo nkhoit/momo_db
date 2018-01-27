@@ -64,7 +64,7 @@ fn update_balance(ident: Identity, conn: &Connection, new_balance: f64) {
 fn balance_by_id(id: i64) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
-    format!("{}", ident.balance)
+    format!("{{ \"balance\": {}}}", ident.balance)
 }
 
 // Alter balance by discord id by amount delta.
