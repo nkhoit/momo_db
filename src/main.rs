@@ -14,9 +14,23 @@ struct Identity {
 
 }
 
+#[derive_FromForm]
+struct AuthInfo {
+    api_key: i64
+}
+
 /**
  * IdentityService. TODO: refactor to another file
  */
+
+fn is_authorized(auth: &AuthInfo, conn : &Connection) -> bool {
+    let rows = &conn.query("select * from api_key where key = $1", &[&auth.api_key]).unwrap();
+    if rows.len() == 0 {
+        false
+    } else {
+        true
+    }
+}
 
 // Loads identity associated with the discord id. If none exists, create one.
 fn load_from_did(d_id: i64, conn: &Connection) -> Identity {
@@ -78,9 +92,19 @@ fn add_by_id(id: i64, delta: f64) -> String{
     format!("Success")
 }
 
-#[post("/discord/tip/<from_id>/<to_id>/<delta>")]
-fn tip_user(from_id: i64, to_id: i64, delta: f64) -> String {
+// Tips from one user to another by amount delta, which should be positive and not exceed the from_users' balance
+#[post("/discord/tip/<from_id>/<to_id>/<delta>?<auth>")]
+fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    if ! is_authorized(&auth, &conn) {
+        return format!("UNAUTHORIZED")
+    }
+    if &from_id == &to_id {
+        return format!("BAD INPUT FOOL")
+    }
+    if (&from_id < &0) || (&to_id < &0) {
+        return format!("WTF IS THIS ID")
+    }
     let from_ident: Identity = load_from_did(from_id, &conn);
     let to_ident: Identity = load_from_did(to_id, &conn);
     if (&from_ident.balance < &delta) && (&delta > &0.0) {
