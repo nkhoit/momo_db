@@ -100,15 +100,18 @@ fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
         return format!("UNAUTHORIZED")
     }
     if &from_id == &to_id {
-        return format!("BAD INPUT FOOL")
+        return format!("Nope that won't work")
     }
     if (&from_id < &0) || (&to_id < &0) {
         return format!("WTF IS THIS ID")
     }
+    if &delta < &0.0 {
+        return format!("Har har")
+    }
     let from_ident: Identity = load_from_did(from_id, &conn);
     let to_ident: Identity = load_from_did(to_id, &conn);
-    if (&from_ident.balance < &delta) && (&delta > &0.0) {
-        format!("Failure")
+    if &from_ident.balance < &delta {
+        format!("You have insufficient funds")
     } else {
         let new_from_balance : f64 = from_ident.balance - delta;
         update_balance(from_ident, &conn, new_from_balance);
