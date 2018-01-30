@@ -20,7 +20,7 @@ create table discord_user(
 create table itl_tx_log(
   id bigserial primary key,
   /* need to keep timezones to translate into unix timestamps */
-  tx_time timestamptz,
+  tx_time TIMESTAMP DEFAULT NOW(),
   u1_id bigint references wlt_id(id) not null,
   u2_id bigint references wlt_id(id) not null,
   /* MOMO going u1 -> u2 or negative the MOMO going u2 -> u1 */
@@ -30,7 +30,7 @@ create table itl_tx_log(
 /* mimibot unilaterally giving or taking MOMO */
 create table itl_handout_log(
   id bigserial primary key,
-  tx_time timestamptz,
+  tx_time TIMESTAMP DEFAULT NOW(),
   u_id bigint references wlt_id(id) not null,
   /* change to users' previous balance */
   delta double precision
@@ -42,7 +42,7 @@ create table extl_tx_log(
   /* The tx id on the chain */
   tx_id text not null,
   /* keep timezone, equivalent to unix timestamp */
-  tx_time timestamptz,
+  tx_time TIMESTAMP DEFAULT NOW(),
   u_id bigint references wlt_id(id) not null,
   /* MOMO going user -> mimibot, or negative the MOMO going mimibot -> user */
   delta double precision

@@ -65,8 +65,12 @@ fn load_from_did(d_id: i64, conn: &Connection) -> Identity {
   }
 }
 
+fn log_itl_tx(ident_one: &Identity, ident_two: &Identity, delta: &f64, conn: &Connection) {
+    &conn.execute("insert into itl_tx_log (u1_id, u2_id, delta) values ($1, $2, $3)", &[&ident_one.id,&ident_two.id,&delta]);
+}
+
 fn update_balance(ident: Identity, conn: &Connection, new_balance: f64) {
-    let up = &conn.execute("update wlt_id set momo_bal = $1 where id = $2", &[&new_balance, &ident.id]).unwrap();
+    &conn.execute("update wlt_id set momo_bal = $1 where id = $2", &[&new_balance, &ident.id]).unwrap();
 }
 
 /**
@@ -113,6 +117,8 @@ fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
     if &from_ident.balance < &delta {
         format!("You have insufficient funds")
     } else {
+        // successful internal tx
+        log_itl_tx(&from_ident, &to_ident, &delta, &conn);
         let new_from_balance : f64 = from_ident.balance - delta;
         update_balance(from_ident, &conn, new_from_balance);
         let new_to_balance : f64 = to_ident.balance + delta;
