@@ -3,8 +3,12 @@
 
 extern crate rocket;
 extern crate postgres;
+extern crate serde_json;
+extern crate num;
 
 use postgres::{Connection, TlsMode};
+use serde_json::{Value, Error};
+use std::f64;
 
 struct Identity {
     id: i64,
@@ -99,6 +103,9 @@ fn add_by_id(id: i64, delta: f64) -> String{
 // Tips from one user to another by amount delta, which should be positive and not exceed the from_users' balance
 #[post("/discord/tip/<from_id>/<to_id>/<delta>?<auth>")]
 fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
+    if (&delta).is_nan() {
+        return format!("Woah, I'm like tripping out dude")
+    }
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     if ! is_authorized(&auth, &conn) {
         return format!("UNAUTHORIZED")
