@@ -89,17 +89,6 @@ fn balance_by_id(id: i64) -> String {
     format!("{{ \"balance\": {}}}", ident.balance)
 }
 
-// Alter balance by discord id by amount delta.
-// Returns the remaining balance on the account
-#[post("/discord/<id>/<delta>")]
-fn add_by_id(id: i64, delta: f64) -> String{
-    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
-    let ident: Identity = load_from_did(id, &conn);
-    let new_balance : f64 = ident.balance + delta;
-    update_balance(ident, &conn, new_balance);
-    format!("Success")
-}
-
 // Tips from one user to another by amount delta, which should be positive and not exceed the from_users' balance
 #[post("/discord/tip/<from_id>/<to_id>/<delta>?<auth>")]
 fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
@@ -132,6 +121,32 @@ fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
         update_balance(to_ident, &conn, new_to_balance);
         format!("{{ \"balance\" : {}}}", new_from_balance)
     }
+}
+
+
+// Offer a chance to get a random amount of momocoins
+fn do_explore(ident: Identity, conn: Connection) -> String {
+  let recent = &conn.query("select count(*) from usr_action_log where u_id = $1 and time < now() + 1 day", &[&ident.id]).unwrap();
+  let mut canExplore = false;
+  if recent.len() == 0 {
+      canExplore = true;
+  }
+  else {
+    let row = recent.get(0);
+    let time = row.get("time");
+    // compare timestamp to current time?
+  }
+
+}
+
+#[post("/discord/explore/<uid>?<auth>")]
+fn explore(uid: i64, auth: AuthInfo) -> String{
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    if ! is_authorized(&auth, &conn) {
+      return format!("UNAUTHORIZED")
+    }
+    let ident = load_from_did(uid, &conn);
+    return do_explore(ident, conn);
 }
 
 // get balance by stellar public key
