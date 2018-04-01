@@ -73,7 +73,22 @@ fn log_itl_tx(ident_one: &Identity, ident_two: &Identity, delta: &f64, conn: &Co
     &conn.execute("insert into itl_tx_log (u1_id, u2_id, delta) values ($1, $2, $3)", &[&ident_one.id,&ident_two.id,&delta]);
 }
 
-fn update_balance(ident: Identity, conn: &Connection, new_balance: f64) {
+fn log_coin_creation(ident: &Identity, delta: &f64, conn: &Connection) {
+    &conn.execute("insert into itl_handout_log (u_id, delta) values ($1, $2)", &[&ident.id, &delta]);
+}
+
+fn has_daily_handout(uid: i64, conn: &Connection) -> bool {
+    let rows = &conn.query("select count(*) from itl_handout_log where u_id = $1 and tx_time >= now() - interval '1 day'", &[&uid]).unwrap();
+    let val : i64 = rows.get(0).get(0);
+    if val == 0 {
+        false
+    } else {
+        true
+    }
+}
+    
+
+fn update_balance(ident: &Identity, conn: &Connection, new_balance: f64) {
     &conn.execute("update wlt_id set momo_bal = $1 where id = $2", &[&new_balance, &ident.id]).unwrap();
 }
 
@@ -91,14 +106,32 @@ fn balance_by_id(id: i64) -> String {
 
 // Alter balance by discord id by amount delta.
 // Returns the remaining balance on the account
-#[post("/discord/<id>/<delta>")]
+#[post("/discord/createcoin/<id>/<delta>")]
 fn add_by_id(id: i64, delta: f64) -> String{
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
     let new_balance : f64 = ident.balance + delta;
-    update_balance(ident, &conn, new_balance);
+    // NOT SURE IF WANT TO LOG log_coin_creation(&ident, &delta, &conn);
+    update_balance(&ident, &conn, new_balance);
     format!("Success")
 }
+
+// Adds one coin to balance. Only works once per day.
+#[post("/discord/claimcoin/<id>")]
+fn claim_free_coin(id: i64) -> String{
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    let ident: Identity = load_from_did(id, &conn);
+    let new_balance : f64 = ident.balance + 1.0;
+    let can_get_coin = !has_daily_handout(ident.id, &conn);
+    if (can_get_coin) {
+        log_coin_creation(&ident, &1.0, &conn);
+        update_balance(&ident, &conn, new_balance);
+        format!("{{ \"balance\" : {}}}", new_balance)
+    } else {
+        format!("Coin already claimed in the past day")
+    }
+}
+
 
 // Tips from one user to another by amount delta, which should be positive and not exceed the from_users' balance
 #[post("/discord/tip/<from_id>/<to_id>/<delta>?<auth>")]
@@ -127,9 +160,9 @@ fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
         // successful internal tx
         log_itl_tx(&from_ident, &to_ident, &delta, &conn);
         let new_from_balance : f64 = from_ident.balance - delta;
-        update_balance(from_ident, &conn, new_from_balance);
+        update_balance(&from_ident, &conn, new_from_balance);
         let new_to_balance : f64 = to_ident.balance + delta;
-        update_balance(to_ident, &conn, new_to_balance);
+        update_balance(&to_ident, &conn, new_to_balance);
         format!("{{ \"balance\" : {}}}", new_from_balance)
     }
 }
@@ -142,6 +175,6 @@ fn balance_by_key(pkey: String) -> String {
 
 
 fn main() {
-    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user])
+    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin])
                     .launch();
 }

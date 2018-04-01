@@ -47,7 +47,7 @@ async def on_message(message):
         out = 'failed'
         with async_timeout.timeout(10):
           async with aiohttp.ClientSession() as session:
-            out = await fetch(session, 'https://momo.bot/wallet/discord/%s' % message.author.id)
+            out = await fetch(session, 'http://localhost:8000/wallet/discord/%s' % message.author.id)
         try:
           js = json.loads(out)
           await bot.send_message(message.channel, 'Hello %s, your balance is: %s' % (message.author, js['balance']));
@@ -61,7 +61,7 @@ async def on_message(message):
           userid = tokens[1][2:-1]
           if userid[0] == '!':
             userid = userid[1:]
-          url = 'https://momo.bot/wallet/discord/tip/%s/%s/%s?api_key=%s' % (message.author.id, userid, tokens[2], api_key)
+          url = 'http://localhost:8000/wallet/discord/tip/%s/%s/%s?api_key=%s' % (message.author.id, userid, tokens[2], api_key)
           out = 'failed'
           with async_timeout.timeout(10):
             async with aiohttp.ClientSession() as session:
@@ -74,7 +74,23 @@ async def on_message(message):
           if (extra != ''):
             final_message = extra
           await bot.send_message(message.channel, 'Failure occurred: %s' % (final_message));
-    
+    elif args.startswith('!claim'):
+        extra = ''
+        try:
+            url = 'http://localhost:8000/wallet/discord/claimcoin/%s' % (message.author.id)
+            out = 'failed'
+            with async_timeout.timeout(10):
+                async with aiohttp.ClientSession() as session:
+                    out = await doPost(session, url)
+                    extra = '%s' % out
+                    js = json.loads(out)
+                    await bot.send_message(message.channel, 'Free daily coin claimed. Your new balance is %s, %s' % (js['balance'], message.author));
+        except Exception as inst:
+          final_message = inst
+          if (extra != ''):
+            final_message = extra
+          await bot.send_message(message.channel, 'Failure occurred: %s' % (final_message));
+
 @bot.event
 async def on_ready():
     print('Logged in as')
