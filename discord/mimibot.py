@@ -90,6 +90,32 @@ async def on_message(message):
           if (extra != ''):
             final_message = extra
           await bot.send_message(message.channel, 'Failure occurred: %s' % (final_message));
+    elif args.startswith('!gamble'):
+        extra = ''
+        try:
+            tokens = args.split()
+            bet = float(token[1])
+            url = 'https://localhost:8000/wallet/discord/gamble/%s/%s' % (message.author.id, 1)
+            out = 'Failure occurred'
+            with async_timeout.timeout(10):
+              async with aiohttp.ClientSession() as session:
+                out = await doPost(session, url)
+              extra = '%s' % out
+              js = json.loads(out)
+              win = js['win']
+              balance = js['balance']
+              await bot.send_message(message.channel, 'Initiating double-or-nothing bet with %s momocoins!!' % (bet));
+              await asyncio.sleep(1)
+              if (win):
+                  await bot.send_message(message.channel, 'Congratulations! You won %s momocoin, your new balance is %s, %s' % (bet, balance, message.author));
+              else:
+                  await bot.send_message(message.channel, 'Sorry %s, you lost your bet! Your new balance is %s.' % (message.author, balance));
+        except Exception as inst:
+          final_message = inst
+          if (extra != ''):
+              final_message = extra
+          await bot.send_message(message.channel, 'Failure occurred: %s' % (final_message));
+
 
 @bot.event
 async def on_ready():
