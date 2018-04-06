@@ -106,7 +106,7 @@ async def on_message(message):
               balance = js['balance']
               await bot.send_message(message.channel, 'Initiating double-or-nothing bet with %s momocoins!!' % (bet));
               await asyncio.sleep(1)
-              if (win):
+              if (win == 'win'):
                   await bot.send_message(message.channel, 'Congratulations! You won %s momocoin, your new balance is %s, %s' % (bet, balance, message.author));
               else:
                   await bot.send_message(message.channel, 'Sorry %s, you lost your bet! Your new balance is %s.' % (message.author, balance));
