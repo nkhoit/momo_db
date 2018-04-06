@@ -6,6 +6,7 @@ authors = ["km42 <kurtmueller42@gmail.com>"]
 [dependencies]
 serde_json = "1.0"
 num = "*"
+rand = "*"
 
 [dependencies.rocket]
 git = "https://github.com/SergioBenitez/Rocket"

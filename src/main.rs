@@ -5,11 +5,12 @@ extern crate rocket;
 extern crate postgres;
 extern crate serde_json;
 extern crate num;
+extern crate rand;
 
 use postgres::{Connection, TlsMode};
 use serde_json::{Value, Error};
 use std::f64;
-use rand::{Rng, thread_rng}
+use rand::{Rng, thread_rng};
 
 struct Identity {
     id: i64,
@@ -136,7 +137,7 @@ fn claim_free_coin(id: i64) -> String{
 // Gambles double-or-nothing
 #[post("/discord/gamble/<id>/<bet>")]
 fn double_or_nothing(id: i64, bet: f64) -> String {
-    let conn = Connection:connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
     if (ident.balance < bet) {
         format!("YO you can't just bet money you don't have!!");
@@ -144,8 +145,8 @@ fn double_or_nothing(id: i64, bet: f64) -> String {
     let mut rng = thread_rng();
     if (rng.gen()) {
         let x: f64 = rng.gen();
-        let new_bal = ident.balance;
-        let status = "";
+        let mut new_bal = ident.balance;
+        let mut status = "";
         if (x < 0.5) { // win
             new_bal = ident.balance + bet;
             status = "win"
@@ -154,11 +155,10 @@ fn double_or_nothing(id: i64, bet: f64) -> String {
             status = "lose"
         }
         update_balance(&ident, &conn, new_bal);
-        format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal );
+        format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal )
     } else {
-        format!("Couldn't generate random numbers???");
+        format!("Couldn't generate random numbers???")
     }
-    format!("Unimplemented");
 }
 
 
