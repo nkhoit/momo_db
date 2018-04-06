@@ -118,6 +118,31 @@ fn add_by_id(id: i64, delta: f64) -> String{
     format!("Success")
 }
 
+fn discover_coin() -> f64 {
+    let mut rng = thread_rng();
+    if (rng.gen()) {
+        let x: f64 = rng.gen();
+        if (x < 0.01) {
+            return 100.0;
+        }
+        if (x < 0.05) {
+            return 5.0;
+        }
+        if (x < 0.3) {
+            return 2.0;
+        }
+        if (x > 0.95) {
+            return 0.3;
+        }
+        if (x > 0.99) {
+            return 0.001;
+        }
+        return 1.0; 
+    } else {
+        return 1.0;
+    }
+}
+
 // Adds one coin to balance. Only works once per day.
 #[post("/discord/claimcoin/<id>")]
 fn claim_free_coin(id: i64) -> String{
@@ -126,9 +151,10 @@ fn claim_free_coin(id: i64) -> String{
     let new_balance : f64 = ident.balance + 1.0;
     let can_get_coin = !has_daily_handout(ident.id, &conn);
     if (can_get_coin) {
-        log_coin_creation(&ident, &1.0, &conn);
+        let discovery_amt = discover_coin();
+        log_coin_creation(&ident, &discovery_amt, &conn);
         update_balance(&ident, &conn, new_balance);
-        format!("{{ \"balance\" : {}}}", new_balance)
+        format!("{{ \"balance\" : {}, \"delta\" : {}}}", new_balance, &discovery_amt)
     } else {
         format!("Coin already claimed in the past day")
     }
