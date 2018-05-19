@@ -230,6 +230,6 @@ fn balance_by_key(pkey: String) -> String {
 
 
 fn main() {
-    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin])
+    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin, double_or_nothing])
                     .launch();
 }
