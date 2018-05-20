@@ -120,27 +120,23 @@ fn add_by_id(id: i64, delta: f64) -> String{
 
 fn discover_coin() -> f64 {
     let mut rng = thread_rng();
-    if (rng.gen()) {
-        let x: f64 = rng.gen();
-        if (x < 0.01) {
-            return 100.0;
-        }
-        if (x < 0.05) {
-            return 5.0;
-        }
-        if (x < 0.3) {
-            return 2.0;
-        }
-        if (x > 0.95) {
-            return 0.3;
-        }
-        if (x > 0.99) {
-            return 0.001;
-        }
-        return 1.0; 
-    } else {
-        return 1.0;
+    let x: f64 = rng.gen();
+    if (x < 0.01) {
+        return 100.0;
     }
+    if (x < 0.05) {
+        return 5.0;
+    }
+    if (x < 0.3) {
+        return 2.0;
+    }
+    if (x > 0.95) {
+        return 0.3;
+    }
+    if (x > 0.99) {
+        return 0.001;
+    }
+    return 1.0; 
 }
 
 // Adds one coin to balance. Only works once per day.
@@ -166,25 +162,21 @@ fn double_or_nothing(id: i64, bet: f64) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
     if (ident.balance < bet) {
-        format!("YO you can't just bet money you don't have!!");
+        return format!("YO you can't just bet money you don't have!!");
     }
     let mut rng = thread_rng();
-    if (rng.gen()) {
-        let x: f64 = rng.gen();
-        let mut new_bal = ident.balance;
-        let mut status = "";
-        if (x < 0.5) { // win
-            new_bal = ident.balance + bet;
-            status = "win"
-        } else {
-            new_bal = ident.balance - bet;
-            status = "lose"
-        }
-        update_balance(&ident, &conn, new_bal);
-        format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal )
+    let x: f64 = rng.gen();
+    let mut new_bal = ident.balance;
+    let mut status = "";
+    if (x < 0.5) { // win
+        new_bal = ident.balance + bet;
+        status = "win"
     } else {
-        format!("Couldn't generate random numbers???")
+        new_bal = ident.balance - bet;
+        status = "lose"
     }
+    update_balance(&ident, &conn, new_bal);
+    format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal )
 }
 
 
