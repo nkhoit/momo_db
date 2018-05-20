@@ -94,8 +94,8 @@ async def on_message(message):
         extra = ''
         try:
             tokens = args.split()
-            bet = float(token[1])
-            url = 'https://localhost:8000/wallet/discord/gamble/%s/%s' % (message.author.id, 1)
+            bet = float(tokens[1])
+            url = 'http://localhost:8000/wallet/discord/gamble/%s/%s' % (message.author.id, 1)
             out = 'Failure occurred'
             with async_timeout.timeout(10):
               async with aiohttp.ClientSession() as session:

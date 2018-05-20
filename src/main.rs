@@ -164,6 +164,9 @@ fn double_or_nothing(id: i64, bet: f64) -> String {
     if (ident.balance < bet) {
         return format!("YO you can't just bet money you don't have!!");
     }
+    if (bet < 0.0) {
+        return format!("Try being more positive");
+    }
     let mut rng = thread_rng();
     let x: f64 = rng.gen();
     let mut new_bal = ident.balance;
