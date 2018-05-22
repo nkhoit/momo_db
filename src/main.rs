@@ -94,6 +94,22 @@ fn update_balance(ident: &Identity, conn: &Connection, new_balance: f64) {
     &conn.execute("update wlt_id set momo_bal = $1 where id = $2", &[&new_balance, &ident.id]).unwrap();
 }
 
+// Logs the transaction and updates the house's coins
+fn run_gambling_updates(user_ident: &Identity, conn: &Connection, delta: &f64) {
+   // negate delta to get the house's delta
+   let real_delta = -1.0 * delta;
+
+   // query the houses' current identity & balance
+   let house_identity : Identity = load_from_did(401763697300865036, &conn); // mimibots' ID
+
+   // update the houses' balance
+   let new_house_balance = house_identity.balance + real_delta;
+   update_balance(&house_identity, &conn, new_house_balance);
+
+   // log tx
+   log_itl_tx(&user_ident, &house_identity, &real_delta, &conn);
+}
+
 /**
  * End of IdentityService
  */
@@ -171,14 +187,18 @@ fn double_or_nothing(id: i64, bet: f64) -> String {
     let x: f64 = rng.gen();
     let mut new_bal = ident.balance;
     let mut status = "";
+    let mut delta : f64 = 0.0;
     if (x < 0.5) { // win
+        delta = bet;
         new_bal = ident.balance + bet;
         status = "win"
     } else {
+        delta = -1.0 * bet;
         new_bal = ident.balance - bet;
         status = "lose"
     }
     update_balance(&ident, &conn, new_bal);
+    run_gambling_updates(&ident, &conn, &delta);
     format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal )
 }
 
