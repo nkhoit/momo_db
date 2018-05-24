@@ -198,7 +198,7 @@ fn double_or_nothing(id: i64, bet: f64, odds: f64) -> String {
         status = "win"
     } else {
         delta = -1.0 * bet;
-        new_bal = ident.balance - delta;
+        new_bal = ident.balance + delta;
         status = "lose"
     }
     update_balance(&ident, &conn, new_bal);
