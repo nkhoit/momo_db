@@ -95,7 +95,11 @@ async def on_message(message):
         try:
             tokens = args.split()
             bet = float(tokens[1])
-            url = 'http://localhost:8000/wallet/discord/gamble/%s/%s' % (message.author.id, bet)
+            if (len(tokens) > 2):
+                odds = float(tokens[2])
+            else:
+                odds = 1.0
+            url = 'http://localhost:8000/wallet/discord/gamble/%s/%s/%s' % (message.author.id, bet, odds)
             out = 'Failure occurred'
             with async_timeout.timeout(10):
               async with aiohttp.ClientSession() as session:
@@ -104,7 +108,7 @@ async def on_message(message):
               js = json.loads(out)
               win = js['win']
               balance = js['balance']
-              await bot.send_message(message.channel, 'Initiating double-or-nothing bet with %s momocoins!!' % (bet));
+              await bot.send_message(message.channel, 'Initiating double-or-nothing bet with %s momocoins with odds %s to 1!!' % (bet, odds));
               await asyncio.sleep(1)
               if (win == 'win'):
                   await bot.send_message(message.channel, 'Congratulations! You won %s momocoin, your new balance is %s, %s' % (bet, balance, message.author));

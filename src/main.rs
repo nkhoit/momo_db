@@ -174,7 +174,7 @@ fn claim_free_coin(id: i64) -> String{
 
 // Gambles double-or-nothing
 #[post("/discord/gamble/<id>/<bet>")]
-fn double_or_nothing(id: i64, bet: f64) -> String {
+fn double_or_nothing(id: i64, bet: f64, odds: f64) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
     if (ident.balance < bet) {
@@ -183,23 +183,27 @@ fn double_or_nothing(id: i64, bet: f64) -> String {
     if (bet < 0.0) {
         return format!("Try being more positive");
     }
+    if (odds < 0.0) {
+        return format!("Must have positive odds");
+    }
     let mut rng = thread_rng();
     let x: f64 = rng.gen();
     let mut new_bal = ident.balance;
     let mut status = "";
     let mut delta : f64 = 0.0;
-    if (x < 0.5) { // win
-        delta = bet;
-        new_bal = ident.balance + bet;
+    let prob: f64 = odds / (odds + 1);
+    if (x < prob) { // win
+        delta = bet / odds;
+        new_bal = ident.balance + delta;
         status = "win"
     } else {
         delta = -1.0 * bet;
-        new_bal = ident.balance - bet;
+        new_bal = ident.balance - delta;
         status = "lose"
     }
     update_balance(&ident, &conn, new_bal);
     run_gambling_updates(&ident, &conn, &delta);
-    format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal )
+    return format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal );
 }
 
 
