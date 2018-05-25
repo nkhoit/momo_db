@@ -173,7 +173,7 @@ fn claim_free_coin(id: i64) -> String{
 }
 
 // Gambles double-or-nothing
-#[post("/discord/gamble/<id>/<p>")]
+#[post("/discord/gamble/<id>/<bet>/<p>")]
 fn double_or_nothing(id: i64, bet: f64, p: f64) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
@@ -202,7 +202,7 @@ fn double_or_nothing(id: i64, bet: f64, p: f64) -> String {
     }
     update_balance(&ident, &conn, new_bal);
     run_gambling_updates(&ident, &conn, &delta);
-    return format!("{{ \"win\" : {}, \"balance\": {}}}", status, new_bal );
+    return format!("{{ \"win\" : \"{}\", \"balance\": {}}}", status, new_bal );
 }
 
 
