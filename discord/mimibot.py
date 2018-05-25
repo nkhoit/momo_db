@@ -98,7 +98,7 @@ async def on_message(message):
             p = 0.5
             if (len(tokens) > 2):
                 p = float(tokens[2])
-            payout = bet / p
+            payout = bet / p - bet
             url = 'http://localhost:8000/wallet/discord/gamble/%s/%s/%s' % (message.author.id, bet, p)
             out = 'Failure occurred'
             with async_timeout.timeout(10):
