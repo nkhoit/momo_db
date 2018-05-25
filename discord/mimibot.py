@@ -113,7 +113,7 @@ async def on_message(message):
               if (win == 'win'):
                   await bot.send_message(message.channel, 'Congratulations! You won %s momocoin, your new balance is %s, %s' % (payout, balance, message.author));
               else:
-                  await bot.send_message(message.channel, 'Sorry %s, you lost your bet! Your new balance is %s.' % (message.author, balance));
+                  await bot.send_message(message.channel, 'Sorry %s, you lost your bet of %s! Your new balance is %s.' % (message.author, bet, balance));
         except Exception as inst:
           final_message = inst
           if (extra != ''):

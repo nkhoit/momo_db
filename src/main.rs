@@ -192,7 +192,7 @@ fn double_or_nothing(id: i64, bet: f64, p: f64) -> String {
     let mut status = "";
     let mut delta : f64 = 0.0;
     if (x < p) { // win
-        delta = bet / p;
+        delta = bet / p - bet;
         new_bal = ident.balance + delta;
         status = "win"
     } else {
