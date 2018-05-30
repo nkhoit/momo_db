@@ -160,10 +160,10 @@ fn discover_coin() -> f64 {
 fn claim_free_coin(id: i64) -> String{
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
-    let new_balance : f64 = ident.balance + 1.0;
     let can_get_coin = !has_daily_handout(ident.id, &conn);
     if (can_get_coin) {
         let discovery_amt = discover_coin();
+        let new_balance : f64 = ident.balance + discovery_amt;
         log_coin_creation(&ident, &discovery_amt, &conn);
         update_balance(&ident, &conn, new_balance);
         format!("{{ \"balance\" : {}, \"delta\" : {}}}", new_balance, &discovery_amt)
