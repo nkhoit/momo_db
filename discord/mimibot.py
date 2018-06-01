@@ -84,7 +84,13 @@ async def on_message(message):
                     out = await doPost(session, url)
                     extra = '%s' % out
                     js = json.loads(out)
-                    await bot.send_message(message.channel, 'Free daily coin claimed. Your new balance is %s, %s' % (js['balance'], message.author));
+                    delta = int(js['delta'])
+                    if (delta > 1):
+                        await bot.send_message(message.channel, 'Wow! %s coins claimed. Your new balance is %s, %s' % (js['delta'], js['balance'], message.author));
+                    elif (delta < 1):
+                        await bot.send_message(message.channel, 'Unlucky, %s of a coin claimed. Your new balance is %s, %s' % (js['delta'], js['balance'], message.author));
+                    else:
+                        await bot.send_message(message.channel, 'Daily coin claimed. Your new balance is %s, %s' % (js['balance'], message.author));
         except Exception as inst:
           final_message = inst
           if (extra != ''):
@@ -108,7 +114,7 @@ async def on_message(message):
               js = json.loads(out)
               win = js['win']
               balance = js['balance']
-              await bot.send_message(message.channel, 'Initiating bet with %s momocoins with success probability %s with potential payout of %s!!' % (bet, p, payout));
+              await bot.send_message(message.channel, 'Initiating bet with %s momocoins, success probability %s, and potential payout of %s!!' % (bet, p, payout));
               await asyncio.sleep(1)
               if (win == 'win'):
                   await bot.send_message(message.channel, 'Congratulations! You won %s momocoin, your new balance is %s, %s' % (payout, balance, message.author));
