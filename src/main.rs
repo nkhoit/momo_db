@@ -170,6 +170,8 @@ fn claim_free_coin(id: i64) -> String{
     } else {
         format!("Coin already claimed in the past day")
     }
+
+
 }
 
 // Gambles double-or-nothing
