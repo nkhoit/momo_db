@@ -22,8 +22,20 @@ with open('mimi_data.json') as data_file:
 server_opts=user_opts['server_opt'][0]
 api_key=server_opts['api_key']
 
+# maps user id to user object
+usercache = {};
+
+class Objecto(object):
+    pass
 
 from contextlib import suppress
+async def fetchAndUpdateCache(userId):
+    try:
+        user_info = await bot.get_user_info(userId);
+        usercache[userId] = user_info;
+    except Exception as err:
+        usercache[userId] = Objecto();
+        usercache[userId].name =  'ERROR NOT A REAL USER';
 
 async def doPost(session, url):
     with async_timeout.timeout(10):
@@ -36,10 +48,14 @@ async def fetch(session, url):
         async with session.get(url) as response:
             return await response.text()
 
-def get_standings(js):
-    outstr = 'Standings for top momocoin:\n';
+
+
+async def get_standings(js):
+    outstr = '__Standings for top momocoin:__\n\n';
     for obj in js :
-        outstr = '%s<@%s> with a balance of %f\n' % (outstr, obj['id'], obj['balance']);
+        if (not obj['id'] in usercache):
+            await fetchAndUpdateCache(obj['id']);
+        outstr = '%s**%s** : %f\n' % (outstr, usercache[obj['id']].name, obj['balance']);
     return outstr;
 
 @bot.event
@@ -51,12 +67,21 @@ async def on_message(message):
         return
     elif args.startswith('!standings'):
         out = 'failed'
+        num = 5;
+        try:
+            tokens = args.split();
+            if len(tokens) > 1:
+                num = int(tokens[1]);
+            if (num > 75):
+                num = 75;
+        except Exception:
+            pass
         with async_timeout.timeout(10):
           async with aiohttp.ClientSession() as session:
-            out = await fetch(session, 'http://localhost:8000/wallet/discord/standings/5')
+            out = await fetch(session, 'http://localhost:8000/wallet/discord/standings/%d' % num)
         try:
           js = json.loads(out)
-          outstr = get_standings(js);
+          outstr = await get_standings(js);
           await bot.send_message(message.channel, '%s' % (outstr));
         except Exception as inst:
           await bot.send_message(message.channel, 'Failure occurred %s' % inst);
