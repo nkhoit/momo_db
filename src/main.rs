@@ -15,7 +15,6 @@ struct Identity {
     balance: f64,
     d_id: Option<i64>, //discord id if the identity has one
     pkey: Option<String> //public key if the identity has one
-
 }
 
 #[derive_FromForm]
@@ -92,6 +91,13 @@ fn update_balance(ident: &Identity, conn: &Connection, new_balance: f64) {
     &conn.execute("update wlt_id set momo_bal = $1 where id = $2", &[&new_balance, &ident.id]).unwrap();
 }
 
+fn get_top(conn : &Connection, num: i64) -> Vec<Identity> {
+    let rows = &conn.query("select w.momo_bal, d.id from discord_user as d, wlt_id as w where d.wlt_id = w.id order by momo_bal desc limit $1", &[&num]).unwrap();
+    // Make a bunch of identity objects that only have discord_id and momo_bal set
+    let mapped = rows.iter().map(|row| Identity{ id: 0, balance: row.get(0), d_id : row.get(1), pkey: None }).collect();
+    return mapped;
+}
+
 /**
  * End of IdentityService
  */
@@ -102,6 +108,20 @@ fn balance_by_id(id: i64) -> String {
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
     format!("{{ \"balance\": {}}}", ident.balance)
+}
+
+// gets the <num> richest users on discord by their discord ID
+#[get("/discord/standings/<num>")]
+fn get_top_standings(num: i64) -> String {
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    let top = get_top(&conn, num);
+    let mapped : Vec<String> = top.iter().map(|ident| format!("{{ \"id\": {}, \"balance\": {} }}", ident.d_id.unwrap(), ident.balance)).collect();
+    let mut outstr = format!("{}", mapped[0]);
+    for x in 1..mapped.len() {
+        outstr = format!("{}, {}", outstr, mapped[x]);
+    }
+    return format!("[ {} ]", outstr);
+
 }
 
 // Alter balance by discord id by amount delta.
@@ -175,6 +195,6 @@ fn balance_by_key(pkey: String) -> String {
 
 
 fn main() {
-    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin])
+    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin, get_top_standings])
                     .launch();
 }

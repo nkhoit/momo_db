@@ -36,6 +36,12 @@ async def fetch(session, url):
         async with session.get(url) as response:
             return await response.text()
 
+def get_standings(js):
+    outstr = 'Standings for top momocoin:\n';
+    for obj in js :
+        outstr = '%s<@%s> with a balance of %f\n' % (outstr, obj['id'], obj['balance']);
+    return outstr;
+
 @bot.event
 async def on_message(message):
     server = bot.get_server(server_opts['serverid'])
@@ -43,6 +49,17 @@ async def on_message(message):
     args = message.content.lower()
     if message.author == bot.user:
         return
+    elif args.startswith('!standings'):
+        out = 'failed'
+        with async_timeout.timeout(10):
+          async with aiohttp.ClientSession() as session:
+            out = await fetch(session, 'http://localhost:8000/wallet/discord/standings/5')
+        try:
+          js = json.loads(out)
+          outstr = get_standings(js);
+          await bot.send_message(message.channel, '%s' % (outstr));
+        except Exception as inst:
+          await bot.send_message(message.channel, 'Failure occurred %s' % inst);
     elif args.startswith('!balance'):
         out = 'failed'
         with async_timeout.timeout(10):
