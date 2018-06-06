@@ -45,6 +45,9 @@ async def on_message(message):
     elif args.startswith('!mimo'):
         url = momo_utils.get_random_url(mimo_dir, server_opts['mimo_base'])
         await bot.send_message(message.channel, url)
+    elif args.startswith('!momi'):
+        url = momo_utils.get_random_url(mimo_dir, server_opts['mimo_base'])
+        await bot.send_message(message.channel, url)
     elif args.startswith('!mimi'):
         url = momo_utils.get_random_url(mimi_dir, server_opts['mimi_base'])
         await bot.send_message(message.channel, url) 
