@@ -5,10 +5,12 @@ extern crate rocket;
 extern crate postgres;
 extern crate serde_json;
 extern crate num;
+extern crate rand;
 
 use postgres::{Connection, TlsMode};
 use serde_json::{Value, Error};
 use std::f64;
+use rand::{Rng, thread_rng};
 
 struct Identity {
     id: i64,
@@ -98,6 +100,22 @@ fn get_top(conn : &Connection, num: i64) -> Vec<Identity> {
     return mapped;
 }
 
+// Logs the transaction and updates the house's coins
+fn run_gambling_updates(user_ident: &Identity, conn: &Connection, delta: &f64) {
+   // negate delta to get the house's delta
+   let real_delta = -1.0 * delta;
+
+   // query the houses' current identity & balance
+   let house_identity : Identity = load_from_did(401763697300865036, &conn); // mimibots' ID
+
+   // update the houses' balance
+   let new_house_balance = house_identity.balance + real_delta;
+   update_balance(&house_identity, &conn, new_house_balance);
+
+   // log tx
+   log_itl_tx(&user_ident, &house_identity, &real_delta, &conn);
+}
+
 /**
  * End of IdentityService
  */
@@ -136,20 +154,75 @@ fn add_by_id(id: i64, delta: f64) -> String{
     format!("Success")
 }
 
+fn discover_coin() -> f64 {
+    let mut rng = thread_rng();
+    let x: f64 = rng.gen();
+    if (x < 0.01) {
+        return 100.0;
+    }
+    if (x < 0.05) {
+        return 5.0;
+    }
+    if (x < 0.3) {
+        return 2.0;
+    }
+    if (x > 0.95) {
+        return 0.3;
+    }
+    if (x > 0.99) {
+        return 0.001;
+    }
+    return 1.0; 
+}
+
 // Adds one coin to balance. Only works once per day.
 #[post("/discord/claimcoin/<id>")]
 fn claim_free_coin(id: i64) -> String{
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
-    let new_balance : f64 = ident.balance + 1.0;
     let can_get_coin = !has_daily_handout(ident.id, &conn);
     if (can_get_coin) {
-        log_coin_creation(&ident, &1.0, &conn);
+        let discovery_amt = discover_coin();
+        let new_balance : f64 = ident.balance + discovery_amt;
+        log_coin_creation(&ident, &discovery_amt, &conn);
         update_balance(&ident, &conn, new_balance);
-        format!("{{ \"balance\" : {}}}", new_balance)
+        format!("{{ \"balance\" : {}, \"delta\" : {}}}", new_balance, &discovery_amt)
     } else {
         format!("Coin already claimed in the past day")
     }
+}
+
+// Gambles double-or-nothing
+#[post("/discord/gamble/<id>/<bet>/<p>")]
+fn double_or_nothing(id: i64, bet: f64, p: f64) -> String {
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    let ident: Identity = load_from_did(id, &conn);
+    if (ident.balance < bet) {
+        return format!("YO you can't just bet money you don't have!!");
+    }
+    if (bet < 0.0) {
+        return format!("Try being more positive");
+    }
+    if (p < 0.0 || p > 1.0) {
+        return format!("Must have a probability between 0.0 and 1.0");
+    }
+    let mut rng = thread_rng();
+    let x: f64 = rng.gen();
+    let mut new_bal = ident.balance;
+    let mut status = "";
+    let mut delta : f64 = 0.0;
+    if (x < p) { // win
+        delta = bet / p - bet;
+        new_bal = ident.balance + delta;
+        status = "win"
+    } else {
+        delta = -1.0 * bet;
+        new_bal = ident.balance + delta;
+        status = "lose"
+    }
+    update_balance(&ident, &conn, new_bal);
+    run_gambling_updates(&ident, &conn, &delta);
+    return format!("{{ \"win\" : \"{}\", \"balance\": {}}}", status, new_bal );
 }
 
 
@@ -195,6 +268,6 @@ fn balance_by_key(pkey: String) -> String {
 
 
 fn main() {
-    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin, get_top_standings])
+    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin, double_or_nothing, get_top_standings])
                     .launch();
 }

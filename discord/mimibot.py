@@ -101,12 +101,48 @@ async def on_message(message):
                     out = await doPost(session, url)
                     extra = '%s' % out
                     js = json.loads(out)
-                    await bot.send_message(message.channel, 'Free daily coin claimed. Your new balance is %s, %s' % (js['balance'], message.author));
+                    delta = int(js['delta'])
+                    if (delta > 1):
+                        await bot.send_message(message.channel, 'Wow! %s coins claimed. Your new balance is %s, %s' % (js['delta'], js['balance'], message.author));
+                    elif (delta < 1):
+                        await bot.send_message(message.channel, 'Unlucky, %s of a coin claimed. Your new balance is %s, %s' % (js['delta'], js['balance'], message.author));
+                    else:
+                        await bot.send_message(message.channel, 'Daily coin claimed. Your new balance is %s, %s' % (js['balance'], message.author));
         except Exception as inst:
           final_message = inst
           if (extra != ''):
             final_message = extra
           await bot.send_message(message.channel, 'Failure occurred: %s' % (final_message));
+    elif args.startswith('!gamble'):
+        extra = ''
+        try:
+            tokens = args.split()
+            bet = float(tokens[1])
+            p = 0.5
+            if (len(tokens) > 2):
+                p = float(tokens[2])
+            payout = bet / p - bet
+            url = 'http://localhost:8000/wallet/discord/gamble/%s/%s/%s' % (message.author.id, bet, p)
+            out = 'Failure occurred'
+            with async_timeout.timeout(10):
+              async with aiohttp.ClientSession() as session:
+                out = await doPost(session, url)
+              extra = '%s' % out
+              js = json.loads(out)
+              win = js['win']
+              balance = js['balance']
+              await bot.send_message(message.channel, 'Initiating bet with %s momocoins, success probability %s, and potential payout of %s!!' % (bet, p, payout));
+              await asyncio.sleep(1)
+              if (win == 'win'):
+                  await bot.send_message(message.channel, 'Congratulations! You won %s momocoin, your new balance is %s, %s' % (payout, balance, message.author));
+              else:
+                  await bot.send_message(message.channel, 'Sorry %s, you lost your bet of %s! Your new balance is %s.' % (message.author, bet, balance));
+        except Exception as inst:
+          final_message = inst
+          if (extra != ''):
+              final_message = extra
+          await bot.send_message(message.channel, 'Failure occurred: %s' % (final_message));
+
 
 @bot.event
 async def on_ready():
