@@ -110,7 +110,7 @@ async def on_message(message):
               out = await doPost(session, url)
             extra = '%s' % out
             js = json.loads(out)
-            await bot.send_message(message.channel, 'Tip completed. Your new balance is %s, %s' % (js['balance'], message.author));
+            await bot.send_message(message.channel, 'Tip completed. %s\'s new balance is %s. %s->%s:%f' % (message.author, js['balance'], message.author, tokens[1], delta));
         except Exception as inst:
           final_message = inst
           if (extra != ''):
