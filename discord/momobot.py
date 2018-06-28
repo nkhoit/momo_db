@@ -6,12 +6,38 @@ import aiohttp
 import asyncio
 import time
 import json
-import momo_utils
 import random
 import math
 import threading
 import time
+import urllib.parse
 from pathlib import Path
+import boto3
+import requests
+from io import BytesIO
+
+s3client = boto3.client('s3')
+
+def buildUrl(key):
+  url = "https://s3.amazonaws.com/www.momobot.net/%s" % urllib.parse.quote(key)
+  return url;
+
+def getFilenames(pfx):
+  response = s3client.list_objects(Bucket='www.momobot.net', Prefix=pfx);
+  return list(filter(lambda l : l[-1] != '/',map(lambda l : l['Key'], response['Contents'])));
+
+#They include the "mimo/" bucket prefix, so these need to be chopped to get filenames
+mimoPrefixes = getFilenames('mimo')
+mimosUrls = list(map(lambda l : buildUrl(l), mimoPrefixes));
+
+momoPrefixes = getFilenames('momo')
+momosUrls = list(map(lambda l : buildUrl(l), momoPrefixes));
+
+mimiPrefixes = getFilenames('mimi')
+mimisUrls = list(map(lambda l : buildUrl(l), mimiPrefixes));
+
+treePrefixes = getFilenames('tree')
+treeUrls = list(map(lambda l : buildUrl(l), treePrefixes));
 
 bot = discord.Client()
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -40,16 +66,16 @@ async def on_message(message):
         other['home'] = message.channel
         await bot.send_message(message.channel, 'Meow, now lurking');
     elif args.startswith('!momo'):
-        url = momo_utils.get_random_url(pics_dir, serv_base_url)
+        url = random.choice(momosUrls)
         await bot.send_message(message.channel, url)
     elif args.startswith('!mimo'):
-        url = momo_utils.get_random_url(mimo_dir, server_opts['mimo_base'])
+        url = random.choice(mimosUrls)
         await bot.send_message(message.channel, url)
     elif args.startswith('!momi'):
-        url = momo_utils.get_random_url(mimo_dir, server_opts['mimo_base'])
+        url = random.choice(mimosUrls)
         await bot.send_message(message.channel, url)
     elif args.startswith('!mimi'):
-        url = momo_utils.get_random_url(mimi_dir, server_opts['mimi_base'])
+        url = random.choice(mimisUrls)
         await bot.send_message(message.channel, url) 
     elif args.startswith('!bruce'):
         url = 'http://www.momobot.net/cat/bruce1.jpg';
@@ -77,13 +103,13 @@ async def on_message(message):
     elif args.startswith('!haywood'):
         await bot.send_message(message.channel, 'https://giphy.com/gifs/coding-srbiWWa0VW2YM')
     elif args.startswith('!goodgirl'):
-        url = momo_utils.get_random_url(mimi_dir, server_opts['mimi_base'])
+        url = random.choice(mimisUrls)
         i = random.randint(10,12)
         f = math.floor(math.fabs(random.gauss(0,1)))
         tot = i + f
         await bot.send_message(message.channel, 'This Mimi is a good girl, rated %s/10: %s' % (i, url))
     elif args.startswith('!goodboy'):
-        url = momo_utils.get_random_url(pics_dir, serv_base_url)
+        url = random.choice(momosUrls)
         i = random.randint(10,12)
         f = math.floor(math.fabs(random.gauss(0,1)))
         tot = i + f
