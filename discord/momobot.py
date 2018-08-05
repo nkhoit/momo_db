@@ -107,13 +107,13 @@ async def on_message(message):
         i = random.randint(10,12)
         f = math.floor(math.fabs(random.gauss(0,1)))
         tot = i + f
-        await bot.send_message(message.channel, 'This mimi is a good girl, rated %s/10: %s' % (i, url))
+        await bot.send_message(message.channel, 'This Mimi is a good girl, rated %s/10: %s' % (i, url))
     elif args.startswith('!goodboy'):
         url = random.choice(momosUrls)
         i = random.randint(10,12)
         f = math.floor(math.fabs(random.gauss(0,1)))
         tot = i + f
-        await bot.send_message(message.channel, 'This momo is a good boy, rated %s/10: %s' % (i, url))
+        await bot.send_message(message.channel, 'This Momo is a good boy, rated %s/10: %s' % (i, url))
     elif args.startswith('!badboy'):
         bad_boys = ['TP1', 'TP2', 'TP3']
         choice = random.sample(bad_boys, 1)[0]
