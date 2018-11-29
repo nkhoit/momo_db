@@ -51,6 +51,26 @@ mimi_dir=server_opts['mimi_dir']
 mimo_dir=server_opts['mimo_dir']
 other = {}
 
+mimilabels = json.loads(open('compressedmimi.json').read()) 
+momolabels = json.loads(open('compressedmomo.json').read()) 
+mimolabels = json.loads(open('compressedmimo.json').read()) 
+
+def sanitizeKeys(d):
+    new_dict = {}
+    for key, value in d.items():
+        new_key = urllib.parse.quote(key)
+        new_dict[new_key] = value
+    return new_dict
+
+mimilabels = sanitizeKeys(mimilabels)
+momolabels = sanitizeKeys(momolabels)
+mimolabels = sanitizeKeys(mimolabels)
+
+
+def getFilenameFromUrl(url):
+    return url[url.rindex('/')+1:]
+
+
 
 from contextlib import suppress
 
@@ -104,16 +124,20 @@ async def on_message(message):
         await bot.send_message(message.channel, 'https://giphy.com/gifs/coding-srbiWWa0VW2YM')
     elif args.startswith('!goodgirl'):
         url = random.choice(mimisUrls)
+        filename = getFilenameFromUrl(url)
+        label = mimilabels[filename]
         i = random.randint(10,12)
         f = math.floor(math.fabs(random.gauss(0,1)))
         tot = i + f
-        await bot.send_message(message.channel, 'This Mimi is a good girl, rated %s/10: %s' % (i, url))
+        await bot.send_message(message.channel, 'This %s is a good girl, rated %s/10: %s' % (label, i, url))
     elif args.startswith('!goodboy'):
         url = random.choice(momosUrls)
+        filename = getFilenameFromUrl(url)
+        label = momolabels[filename]
         i = random.randint(10,12)
         f = math.floor(math.fabs(random.gauss(0,1)))
         tot = i + f
-        await bot.send_message(message.channel, 'This Momo is a good boy, rated %s/10: %s' % (i, url))
+        await bot.send_message(message.channel, 'This %s is a good boy, rated %s/10: %s' % (label, i, url))
     elif args.startswith('!badboy'):
         bad_boys = ['TP1', 'TP2', 'TP3']
         choice = random.sample(bad_boys, 1)[0]
