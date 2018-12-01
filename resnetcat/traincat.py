@@ -14,6 +14,20 @@ BATCH_SIZE = 50
 
 numpy.random.seed(12345)
 
+
+#turns a momobot url into a filename
+def getFilenameFromUrl(url):
+    return url[url.rindex('/')+1:]
+
+def ignoreFiles():
+    content = []
+    with open('ignore.txt') as f:
+        content = f.readlines()
+    # you may also want to remove whitespace characters like `\n` at the end of each line
+    content = [x.strip() for x in content] 
+    return list(map(lambda x : getFilenameFromUrl(x), content))
+
+
 # returns (x_data, y_data). Returns all data - segment it into train / test afterwards
 def loadData():
     #momo is label 0, mimi is label 1
@@ -23,6 +37,7 @@ def loadData():
     for i in range(2):
         d = labeldirs[i]
         allfiles = os.listdir(d)
+        allfiles = list(set(allfiles).difference(ignoreFiles()))
         for filename in allfiles:
             filedir = d + "/" + filename
             im = Image.open(filedir)
@@ -55,11 +70,7 @@ def train_and_test(x_data, y_data):
     y_test = numpy.array(list(map(lambda z : (0,1) if z else (1,0), y_test)))
     return (x_train, y_train, x_test, y_test)
 
-(x_data, y_data) = loadData()
-(x_train, y_train, x_test, y_test) = train_and_test(x_data, y_data)
-
-model = None
-
+#returns (model, history)
 def buildModel():
     # Now, we run the classifier!
     model = ResNet50(include_top=True, weights=None, classes=2)
@@ -71,9 +82,11 @@ def buildModel():
             batch_size=BATCH_SIZE,
             shuffle=True,
             validation_data=(x_test, y_test))
+    return (model, history)
 
+#returns model
 def loadModel():
-    model = load_model('200epoch.h5')
+    return load_model('200epoch.h5')
 
 # returns (true_positive, false_positive, true_negative, false_negative)
 def calculate_accuracy(res_labels, res_labels_true):
@@ -82,22 +95,23 @@ def calculate_accuracy(res_labels, res_labels_true):
     false_negative = 0
     false_positive = 0
     for i in range(0,len(res_labels)):
-        if res_labels[i] == 1 and res_correct[i] == True:
+        if res_labels[i] == 1 and res_labels_true[i] == True:
             true_positive = true_positive + 1
-        if res_labels[i] == 1 and res_correct[i] == False:
+        if res_labels[i] == 1 and res_labels_true[i] == False:
             false_positive = false_positive + 1
-        if res_labels[i] == 0 and res_correct[i] == True:
+        if res_labels[i] == 0 and res_labels_true[i] == True:
             true_negative = true_negative + 1
-        if res_labels[i] == 0 and res_correct[i] == False:
+        if res_labels[i] == 0 and res_labels_true[i] == False:
             false_negative = false_negative + 1
     return (true_positive, false_positive, true_negative, false_negative)
 
 #returns (sensitivity, specificity, accuracy)
-def calculate_accuracy_on_x_test():
+def calculate_accuracy_on_x_test(model, x_test):
     res = model.predict(x_test)
+    l = len(x_test)
     res_labels = list(map(lambda x : 0 if x[0] > x[1] else 1,res))
-    res_correct = [0]*383
-    for i in range(0,383):
+    res_correct = [0]*l
+    for i in range(0,l):
         is_correct = res_labels[i] == y_test[i][1]
         res_correct[i] = is_correct
     (true_positive, false_positive, true_negative, false_negative) = calculate_accuracy(res_labels, res_correct)
@@ -106,4 +120,11 @@ def calculate_accuracy_on_x_test():
     accuracy = (true_positive + true_negative) / (true_positive + true_negative + false_positive + false_negative)
     return (sensitivity, specificity, accuracy)
 
-loadModel()
+(x_data, y_data) = loadData()
+(x_train, y_train, x_test, y_test) = train_and_test(x_data, y_data)
+
+model = loadModel()
+# (model, history) = buildModel()
+
+(sensitivity, specificity, accuracy) = calculate_accuracy_on_x_test(model, x_test)
+print("sensitivity: %s, specificity: %s, accuracy: %s" % (sensitivity, specificity, accuracy))
