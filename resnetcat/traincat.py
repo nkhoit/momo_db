@@ -1,6 +1,7 @@
 from keras.applications.resnet50 import ResNet50
 from keras.preprocessing import image
 from keras.applications.resnet50 import preprocess_input, decode_predictions
+from keras.models import load_model
 import numpy
 import json
 import os
@@ -57,13 +58,52 @@ def train_and_test(x_data, y_data):
 (x_data, y_data) = loadData()
 (x_train, y_train, x_test, y_test) = train_and_test(x_data, y_data)
 
-# Now, we run the classifier!
-model = ResNet50(include_top=True, weights=None, classes=2)
+model = None
 
-model.compile(loss='mean_squared_error', optimizer='sgd')
+def buildModel():
+    # Now, we run the classifier!
+    model = ResNet50(include_top=True, weights=None, classes=2)
 
-history = model.fit(x_train, y_train,
-          epochs=NUM_EPOCHS,
-          batch_size=BATCH_SIZE,
-          shuffle=True,
-          validation_data=(x_test, y_test))
+    model.compile(loss='mean_squared_error', optimizer='sgd')
+
+    history = model.fit(x_train, y_train,
+            epochs=NUM_EPOCHS,
+            batch_size=BATCH_SIZE,
+            shuffle=True,
+            validation_data=(x_test, y_test))
+
+def loadModel():
+    model = load_model('200epoch.h5')
+
+# returns (true_positive, false_positive, true_negative, false_negative)
+def calculate_accuracy(res_labels, res_labels_true):
+    true_negative = 0
+    true_positive = 0
+    false_negative = 0
+    false_positive = 0
+    for i in range(0,len(res_labels)):
+        if res_labels[i] == 1 and res_correct[i] == True:
+            true_positive = true_positive + 1
+        if res_labels[i] == 1 and res_correct[i] == False:
+            false_positive = false_positive + 1
+        if res_labels[i] == 0 and res_correct[i] == True:
+            true_negative = true_negative + 1
+        if res_labels[i] == 0 and res_correct[i] == False:
+            false_negative = false_negative + 1
+    return (true_positive, false_positive, true_negative, false_negative)
+
+#returns (sensitivity, specificity, accuracy)
+def calculate_accuracy_on_x_test():
+    res = model.predict(x_test)
+    res_labels = list(map(lambda x : 0 if x[0] > x[1] else 1,res))
+    res_correct = [0]*383
+    for i in range(0,383):
+        is_correct = res_labels[i] == y_test[i][1]
+        res_correct[i] = is_correct
+    (true_positive, false_positive, true_negative, false_negative) = calculate_accuracy(res_labels, res_correct)
+    sensitivity = true_positive / (true_positive + false_negative)
+    specificity = true_negative / (true_negative + false_positive)
+    accuracy = (true_positive + true_negative) / (true_positive + true_negative + false_positive + false_negative)
+    return (sensitivity, specificity, accuracy)
+
+loadModel()
