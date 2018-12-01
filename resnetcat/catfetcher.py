@@ -1,11 +1,19 @@
 import os
+import PIL
 from PIL import Image
 import json
 import boto3
 import requests
 from io import BytesIO
+import urllib.parse
 
 s3client = boto3.client('s3')
+
+def getFilenamesFromUrls(urls):
+    return list(map(lambda url : url[url.rindex('/')+1:], urls))
+
+def sanitizeStrings(x):
+	return list(map(lambda z : urllib.parse.quote(z), x))
 
 def buildUrl(key):
   return "https://s3.amazonaws.com/www.momobot.net/%s" % key;
@@ -48,13 +56,21 @@ for i in range(len(dirin2list)):
 	#size of thumbnail
 	size = 224, 224
 	
+	localFiles = list(filter(lambda i : i[-5:] != ".json", os.listdir(dirout)))
+	remoteFiles = getFilenamesFromUrls(urls)
+	extras = list(set(localFiles).difference(set(remoteFiles)))
+	for fileName in extras:
+		fullPath = dirout + "/" + fileName
+		print("deleted: " + fullPath)
+		os.remove(fullPath)
 	for i in range(len(urls)):
 		filename = filenames[i];
 		url = urls[i];
 		fout = dirout + "/" + filename
 		if (os.path.isfile(fout)):
 			continue;
+		print("Adding picture: " + fout)
 		response = requests.get(url)
 		im = Image.open(BytesIO(response.content))
-		im.thumbnail(size)
-		im.save(fout, optimize = True)
+		im2 = im.resize(size, PIL.Image.LANCZOS)
+		im2.save(fout, optimize = True)
