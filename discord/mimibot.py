@@ -182,5 +182,6 @@ async def on_ready():
 
 
 #Run the server with the token
-bot.run(server_opts['token'])
+while True:
+  bot.run(server_opts['token'])
 
