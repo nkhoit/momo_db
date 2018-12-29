@@ -205,7 +205,7 @@ async def on_ready():
 #    checkfs()
     #t = threading.Thread(target=startStuff)
     #t.start()
-    await bot.change_presence(game=discord.Game(name='Cat goes fishing'))
+    await bot.change_presence(game=discord.Game(name='Cat Quest'))
 
 
 #Run the server with the token
