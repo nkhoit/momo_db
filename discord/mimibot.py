@@ -95,6 +95,16 @@ async def on_message(message):
           await bot.send_message(message.channel, 'Hello %s, your balance is: %s' % (message.author, js['balance']));
         except Exception as inst:
           await bot.send_message(message.channel, 'Failure occurred %s' % inst);
+    elif args.startswith('!graph'):
+        url = 'http://localhost:8000/wallet/discord/buildgraph/%s' % (message.author.id)
+        out = 'failed'
+        with async_timeout.timeout(10):
+            async with aiohttp.ClientSession() as session:
+                out = await doPost(session, url)
+        try:
+          await bot.send_message(message.channel, out);
+        except Exception as inst:
+          await bot.send_message(message.channel, 'Failure occurred %s' % inst);
     elif args.startswith('!tip'):
         extra = ''
         try:

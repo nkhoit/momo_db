@@ -390,7 +390,7 @@ fn build_graph_data(id: i64) -> String {
     stdfs::write(format!("/var/www/discorduser/{}/data.json", ident.id),serialized);
     fs::symlink("/var/www/discorduser/display.html", format!("/var/www/discorduser/{}/display.html", ident.id));
     fs::symlink("/var/www/discorduser/graphit.js", format!("/var/www/discorduser/{}/graphit.js", ident.id));
-    return format!("Done, see momobot.net/discorduser/{}/display.html",ident.id);
+    return format!("Done, see http://momobot.net/discorduser/{}/display.html",ident.id);
 }
 
 
