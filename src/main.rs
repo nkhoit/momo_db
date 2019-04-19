@@ -1,16 +1,20 @@
-#![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-extern crate rocket;
+#[macro_use] extern crate rocket;
 extern crate postgres;
-extern crate serde_json;
+extern crate serde;
 extern crate num;
 extern crate rand;
+extern crate chrono;
 
+use chrono::NaiveDateTime;
 use postgres::{Connection, TlsMode};
-use serde_json::{Value, Error};
 use std::f64;
 use rand::{Rng, thread_rng};
+use serde::{Deserialize, Serialize};
+use std::os::unix::fs;
+use std::fs as stdfs;
+
 
 struct Identity {
     id: i64,
@@ -19,7 +23,19 @@ struct Identity {
     pkey: Option<String> //public key if the identity has one
 }
 
-#[derive_FromForm]
+#[derive(Serialize, Deserialize, Copy, Clone)]
+enum EventType {
+    Gambling, Tipped, Tipping, Claiming, Investing, Liquidating
+}
+
+#[derive(Serialize, Deserialize)]
+struct EventDataPoint {
+    delta: f64,
+    balance: f64,
+    time: NaiveDateTime,
+    eventtype: EventType
+}
+
 struct AuthInfo {
     api_key: i64
 }
@@ -37,11 +53,54 @@ fn is_authorized(auth: &AuthInfo, conn : &Connection) -> bool {
     }
 }
 
+// Takes a transaction and determines what event it is based on the IDs involved
+fn determine_event_type(from_id: i64, to_id: i64, uid: i64) -> EventType {
+    // 10 is Mimi
+    // sending money to mimi means you're gambling (positive or negative)
+    if to_id == 10 {
+        return EventType::Gambling;
+    }
+
+    // 22 is Ottobot
+    // sending money to ottobot means you are investing
+    // receiving money from ottobot means you are liquidating
+    if from_id == 22 {
+        return EventType::Liquidating;
+    }
+    if to_id == 22 {
+        return EventType::Investing;
+    }
+
+    if from_id == uid {
+        return EventType::Tipping;
+    }
+
+    if to_id == uid {
+        return EventType::Tipped;
+    }
+
+    // Hopefully this should be impossible
+    println!("Encountered a transaction that makes no sense with uid {}", uid);
+    panic!("Illegal!");
+}
+
+// Gets all transactions for a user sorted reverse by time
+fn get_tx_for_user(id: i64, conn: &Connection) -> std::result::Result<postgres::rows::Rows, postgres::Error> {
+    let rows = conn.query("select * from itl_tx_log where u1_id = $1 or u2_id = $1 order by tx_time asc", &[&id]);
+    return rows;
+}
+
+// Gets all handouts for a user sorted reverse by time
+fn get_handouts_for_user(id: i64, conn: &Connection) -> std::result::Result<postgres::rows::Rows, postgres::Error> {
+    let rows = conn.query("select * from itl_handout_log where u_id = $1 order by tx_time asc", &[&id]);
+    return rows;
+}
+
 // Loads identity associated with the discord id. If none exists, create one.
 fn load_from_did(d_id: i64, conn: &Connection) -> Identity {
   let rows = &conn.query("select * from wlt_id cross join discord_user where wlt_id.id = discord_user.wlt_id and discord_user.id = $1", &[&d_id]).unwrap();
-  let mut id: i64 = 0;
-  let mut balance: f64 = 0.0;
+  let mut id: i64;
+  let mut balance: f64;
   let mut pkey: Option<String> = None;
   if rows.len() == 0 {
       println!("Creating new identity for discord id {}", d_id);
@@ -157,19 +216,19 @@ fn add_by_id(id: i64, delta: f64) -> String{
 fn discover_coin() -> f64 {
     let mut rng = thread_rng();
     let x: f64 = rng.gen();
-    if (x < 0.01) {
+    if x < 0.01 {
         return 100.0;
     }
-    if (x < 0.05) {
+    if x < 0.05 {
         return 5.0;
     }
-    if (x < 0.3) {
+    if x < 0.3 {
         return 2.0;
     }
-    if (x > 0.95) {
+    if x > 0.95 {
         return 0.3;
     }
-    if (x > 0.99) {
+    if x > 0.99 {
         return 0.001;
     }
     return 1.0; 
@@ -181,7 +240,7 @@ fn claim_free_coin(id: i64) -> String{
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
     let can_get_coin = !has_daily_handout(ident.id, &conn);
-    if (can_get_coin) {
+    if can_get_coin {
         let discovery_amt = discover_coin();
         let new_balance : f64 = ident.balance + discovery_amt;
         log_coin_creation(&ident, &discovery_amt, &conn);
@@ -194,16 +253,16 @@ fn claim_free_coin(id: i64) -> String{
 
 // Gambles double-or-nothing
 #[post("/discord/gamble/<id>/<bet>/<p>")]
-fn double_or_nothing(id: i64, bet: f64, p: f64) -> String {
+fn double_or_nothing(id: i64, bet: f64, p: f64) -> String { // lul add auth
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
     let ident: Identity = load_from_did(id, &conn);
-    if (ident.balance < bet) {
+    if ident.balance < bet {
         return format!("YO you can't just bet money you don't have!!");
     }
-    if (bet < 0.0) {
+    if bet < 0.0 {
         return format!("Try being more positive");
     }
-    if (p < 0.0 || p > 1.0) {
+    if p < 0.0 || p > 1.0 {
         return format!("Must have a probability between 0.0 and 1.0");
     }
     let mut rng = thread_rng();
@@ -211,7 +270,7 @@ fn double_or_nothing(id: i64, bet: f64, p: f64) -> String {
     let mut new_bal = ident.balance;
     let mut status = "";
     let mut delta : f64 = 0.0;
-    if (x < p) { // win
+    if x < p { // win
         delta = bet / p - bet;
         new_bal = ident.balance + delta;
         status = "win"
@@ -225,17 +284,123 @@ fn double_or_nothing(id: i64, bet: f64, p: f64) -> String {
     return format!("{{ \"win\" : \"{}\", \"balance\": {}}}", status, new_bal );
 }
 
+fn copy_with_balance(orig: &EventDataPoint, balance: f64) -> EventDataPoint {
+    return EventDataPoint {
+        delta: orig.delta,
+        balance: balance,
+        time: orig.time,
+        eventtype: orig.eventtype
+    };
+}
+
+// Builds a graph for input user
+#[post("/discord/buildgraph/<id>")]
+fn build_graph_data(id: i64) -> String {
+    let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
+    let ident: Identity = load_from_did(id, &conn);
+    let cur_bal = ident.balance;
+
+    let mut transaction_data: Vec<EventDataPoint> = Vec::new();
+    let tx_rows = get_tx_for_user(ident.id, &conn);
+    for row in &tx_rows.unwrap() {
+
+        let mut nextData = EventDataPoint {
+            delta: row.get("delta"),
+            balance: 0.0,
+            time: row.get("tx_time"),
+            eventtype: determine_event_type(row.get("u1_id"), row.get("u2_id"), ident.id)
+        };
+        transaction_data.push(nextData);
+    }
+
+    let handout_rows = get_handouts_for_user(ident.id, &conn);
+    let mut handout_data: Vec<EventDataPoint> = Vec::new();
+    
+    for row in &handout_rows.unwrap() {
+        let nextData = EventDataPoint {
+            time: row.get("tx_time"),
+            balance: 0.0,
+            delta: row.get("delta"),
+            eventtype: EventType::Claiming
+        };
+        handout_data.push(nextData);
+    }
+    
+    // Build a finalized array with a running total combining the two arrays
+    let mut final_data: Vec<EventDataPoint> = Vec::new();
+    let mut running_balance = cur_bal;
+    while transaction_data.len() > 0 || handout_data.len() > 0 {
+        if transaction_data.len() == 0 {
+            let next_data = handout_data.pop().unwrap();
+            final_data.push(copy_with_balance(&next_data, running_balance));
+            running_balance = running_balance - next_data.delta;
+            continue;
+        }
+
+        if handout_data.len() == 0 {
+            let next_data = transaction_data.pop().unwrap();
+            final_data.push(copy_with_balance(&next_data, running_balance));
+            running_balance = running_balance - next_data.delta;
+            continue;
+        }
+
+        // Pop the most recent of the last items of either array
+        let nextData: EventDataPoint;
+        let mut truthValue = false;
+        {
+            let nextTransactionData: &EventDataPoint = &(transaction_data[transaction_data.len()-1]);
+            let nextHandoutData: &EventDataPoint = &handout_data[handout_data.len()-1];
+
+            if nextTransactionData.time > nextHandoutData.time {
+                nextData = copy_with_balance(nextTransactionData, running_balance);
+                // money losing activities get factor of -1 times the delta
+                let mut factor = match nextTransactionData.eventtype {
+                    EventType::Tipping | EventType::Investing | EventType::Gambling => -1.0,
+                    _ => 1.0
+                };
+                running_balance = running_balance - factor * nextTransactionData.delta;
+                final_data.push(nextData);
+                //transaction_data.pop();
+                truthValue = true; 
+            } else {
+                nextData = copy_with_balance(nextHandoutData, running_balance);
+                running_balance = running_balance - nextHandoutData.delta;
+                final_data.push(nextData);
+                //handout_data.pop();
+                truthValue = false;
+            }
+        }
+
+        if truthValue {
+            transaction_data.pop();
+        } else {
+            handout_data.pop();
+        } 
+
+    }
+
+
+    // Write final data as a CSV thing to a file somewhere
+    final_data.reverse();
+    let serialized = serde_json::to_string(&final_data).unwrap();
+    stdfs::create_dir(format!("/var/www/discorduser/{}", ident.id));
+    
+    
+    stdfs::remove_file(format!("/var/www/discorduser/{}/data.json", ident.id));
+    stdfs::write(format!("/var/www/discorduser/{}/data.json", ident.id),serialized);
+    fs::symlink("/var/www/discorduser/display.html", format!("/var/www/discorduser/{}/display.html", ident.id));
+    fs::symlink("/var/www/discorduser/graphit.js", format!("/var/www/discorduser/{}/graphit.js", ident.id));
+    return format!("Done, see momobot.net/discorduser/{}/display.html",ident.id);
+}
+
 
 // Tips from one user to another by amount delta, which should be positive and not exceed the from_users' balance
-#[post("/discord/tip/<from_id>/<to_id>/<delta>?<auth>")]
-fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
+#[post("/discord/tip/<from_id>/<to_id>/<delta>")]
+fn tip_user(from_id: i64, to_id: i64, delta: f64) -> String {
     if (&delta).is_nan() {
         return format!("Woah, I'm like tripping out dude")
     }
     let conn = Connection::connect("postgres://postgres:test@localhost:5432/momo", TlsMode::None).unwrap();
-    if ! is_authorized(&auth, &conn) {
-        return format!("UNAUTHORIZED")
-    }
     if &from_id == &to_id {
         return format!("Nope that won't work")
     }
@@ -260,14 +425,6 @@ fn tip_user(from_id: i64, to_id: i64, delta: f64, auth: AuthInfo) -> String {
     }
 }
 
-// get balance by stellar public key
-#[get("/key/<pkey>")]
-fn balance_by_key(pkey: String) -> String {
-    format!("{}", 0.0) // TODO
-}
-
-
 fn main() {
-    rocket::ignite().mount("/wallet", routes![balance_by_id, balance_by_key, tip_user, add_by_id, claim_free_coin, double_or_nothing, get_top_standings])
-                    .launch();
+    rocket::ignite().mount("/wallet", routes![balance_by_id, tip_user, add_by_id, claim_free_coin, double_or_nothing, get_top_standings, build_graph_data]).launch();
 }
