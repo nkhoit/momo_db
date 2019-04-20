@@ -138,7 +138,7 @@ fn log_coin_creation(ident: &Identity, delta: &f64, conn: &Connection) {
 }
 
 fn has_daily_handout(uid: i64, conn: &Connection) -> bool {
-    let rows = &conn.query("select count(*) from itl_handout_log where u_id = $1 and tx_time >= now() - interval '1 day'", &[&uid]).unwrap();
+    let rows = &conn.query("select count(*) from itl_handout_log where u_id = $1 and tx_time >= current_date::timestamp", &[&uid]).unwrap();
     let val : i64 = rows.get(0).get(0);
     if val == 0 {
         false
