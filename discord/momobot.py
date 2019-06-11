@@ -70,6 +70,31 @@ mimolabels = sanitizeKeys(mimolabels)
 def getFilenameFromUrl(url):
     return url[url.rindex('/')+1:]
 
+def toraList():
+  import re
+
+  tora_home = "http://home.runtimeexception.net/photos/tora/"
+  tora_data = urllib.request.urlopen(tora_home)
+  tora_lines = tora_data.readlines()
+  tora_strings = []
+  newlines = []
+  torasUrls = []
+
+  for x in tora_lines:
+    s = str(x, 'utf-8')
+    tora_strings.append(s)
+
+  for x in tora_strings:
+    r = re.findall("\"\w+\-?\w*-min.jpg\"", x)
+    for y in r:
+      t = y.strip('"')
+      newlines.append(t)
+	
+  for x in newlines:
+    p = tora_home + x
+    torasUrls.append(p)
+	
+  return torasUrls
 
 
 from contextlib import suppress
@@ -99,6 +124,12 @@ async def on_message(message):
         await bot.send_message(message.channel, url) 
     elif args.startswith('!bruce'):
         url = 'http://www.momobot.net/cat/bruce1.jpg';
+        await bot.send_message(message.channel, url)
+    elif args.startswith('!tora'):
+        url = random.choice(toraList())
+        await bot.send_message(message.channel, url)
+    elif args.startswith('!billy'):
+        url = random.choice(toraList())
         await bot.send_message(message.channel, url)
     elif args.startswith('!hairycrab'):
         await bot.send_message(message.channel, 'https://giant.gfycat.com/EqualDemandingAiredale.webm')
