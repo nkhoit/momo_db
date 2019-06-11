@@ -114,7 +114,7 @@ async def on_message(message):
         url = random.choice(mimisUrls)
         await bot.send_message(message.channel, url) 
     elif args.startswith('!bruce'):
-        url = 'http://www.momobot.net/cat/bruce1.jpg';
+        url = 'https://s3.amazonaws.com/www.momobot.net/momo/bruce1.jpg';
         await bot.send_message(message.channel, url)
     elif args.startswith('!tora'):
         url = random.choice(toraList())
