@@ -14,6 +14,7 @@ import urllib.parse
 from pathlib import Path
 import boto3
 import requests
+import re
 from io import BytesIO
 
 s3client = boto3.client('s3')
@@ -70,30 +71,20 @@ mimolabels = sanitizeKeys(mimolabels)
 def getFilenameFromUrl(url):
     return url[url.rindex('/')+1:]
 
-def toraList():
-  import re
 
+def toraList():
   tora_home = "http://home.runtimeexception.net/photos/tora/"
   tora_data = urllib.request.urlopen(tora_home)
   tora_lines = tora_data.readlines()
-  tora_strings = []
-  newlines = []
   torasUrls = []
 
   for x in tora_lines:
     s = str(x, 'utf-8')
-    tora_strings.append(s)
-
-  for x in tora_strings:
-    r = re.findall("\"\w+\-?\w*-min.jpg\"", x)
+    r = re.findall("\"\w+\-?\w*-min.jpg\"", s)
     for y in r:
       t = y.strip('"')
-      newlines.append(t)
-	
-  for x in newlines:
-    p = tora_home + x
-    torasUrls.append(p)
-	
+      p = tora_home + t
+      torasUrls.append(p)
   return torasUrls
 
 
