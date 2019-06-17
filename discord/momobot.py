@@ -173,7 +173,7 @@ async def on_message(message):
     elif args.startswith('!badboy'):
         bad_boys = ['TP1', 'TP2', 'TP3']
         choice = random.sample(bad_boys, 1)[0]
-        url = 'https://s3.amazonaws.com/http://momobot.net/cat/%s.jpg' % choice
+        url = 'https://s3.amazonaws.com/www.momobot.net/momo/%s.jpg' % choice
         await bot.send_message(message.channel, 'Bad to the bone %s' % url)
     elif args.startswith('!panic'):
         url = 'https://i.redd.it/74kak5q92zsy.jpg'
