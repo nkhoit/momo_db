@@ -39,8 +39,6 @@ mimisUrls = list(map(lambda l : buildUrl(l), mimiPrefixes));
 treePrefixes = getFilenames('tree')
 treeUrls = list(map(lambda l : buildUrl(l), treePrefixes));
 
-toraCache = toraList()
-
 bot = discord.Client()
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 with open('user_data.json') as data_file:
@@ -87,6 +85,8 @@ def toraList():
       p = tora_home + relative_url
       torasUrls.append(p)
   return torasUrls
+
+toraCache = toraList()
 
 
 from contextlib import suppress
