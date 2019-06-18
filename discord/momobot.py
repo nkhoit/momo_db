@@ -9,11 +9,11 @@ import json
 import random
 import math
 import threading
-import time
 import urllib.parse
 from pathlib import Path
 import boto3
 import requests
+import re
 from io import BytesIO
 
 s3client = boto3.client('s3')
@@ -38,6 +38,8 @@ mimisUrls = list(map(lambda l : buildUrl(l), mimiPrefixes));
 
 treePrefixes = getFilenames('tree')
 treeUrls = list(map(lambda l : buildUrl(l), treePrefixes));
+
+toraCache = toraList()
 
 bot = discord.Client()
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -71,6 +73,21 @@ def getFilenameFromUrl(url):
     return url[url.rindex('/')+1:]
 
 
+def toraList():
+  tora_home = "http://home.runtimeexception.net/photos/tora/"
+  tora_data = urllib.request.urlopen(tora_home)
+  tora_lines = tora_data.readlines()
+  torasUrls = []
+
+  for x in tora_lines:
+    s = str(x, 'utf-8')
+    r = re.findall(r"\"([\w-]+)\.(jpg|gif|png|jpeg)\"", s)
+    for y in r:
+      relative_url = '.'.join(list(y))
+      p = tora_home + relative_url
+      torasUrls.append(p)
+  return torasUrls
+
 
 from contextlib import suppress
 
@@ -98,7 +115,10 @@ async def on_message(message):
         url = random.choice(mimisUrls)
         await bot.send_message(message.channel, url) 
     elif args.startswith('!bruce'):
-        url = 'http://www.momobot.net/cat/bruce1.jpg';
+        url = 'https://s3.amazonaws.com/www.momobot.net/momo/bruce1.jpg';
+        await bot.send_message(message.channel, url)
+    elif args.startswith('!tora') or args.startswith('!tiger') or args.startswith('!billy'):
+        url = random.choice(toraCache)
         await bot.send_message(message.channel, url)
     elif args.startswith('!hairycrab'):
         await bot.send_message(message.channel, 'https://giant.gfycat.com/EqualDemandingAiredale.webm')
@@ -138,10 +158,22 @@ async def on_message(message):
         f = math.floor(math.fabs(random.gauss(0,1)))
         tot = i + f
         await bot.send_message(message.channel, 'This %s is a good boy, rated %s/10: %s' % (label, i, url))
+    elif args.startswith('!goodtora') or args.startswith('!goodtiger'):
+        url = random.choice(toraCache)
+        i = random.randint(10,12)
+        f = math.floor(math.fabs(random.gauss(0,1)))
+        tot = i + f
+        await bot.send_message(message.channel, 'This Daitora is a good tiger, rated %s/10: %s' % (tot, url))
+    elif args.startswith('!goodbilly'):
+        url = random.choice(toraCache)
+        i = random.randint(10,12)
+        f = math.floor(math.fabs(random.gauss(0,1)))
+        tot = i + f
+        await bot.send_message(message.channel, 'This Billy is a good tiger, rated %s/10: %s' % (tot, url))
     elif args.startswith('!badboy'):
         bad_boys = ['TP1', 'TP2', 'TP3']
         choice = random.sample(bad_boys, 1)[0]
-        url = 'http://momobot.net/cat/%s.jpg' % choice
+        url = 'https://s3.amazonaws.com/www.momobot.net/momo/%s.jpg' % choice
         await bot.send_message(message.channel, 'Bad to the bone %s' % url)
     elif args.startswith('!panic'):
         url = 'https://i.redd.it/74kak5q92zsy.jpg'
