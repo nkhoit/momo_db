@@ -89,8 +89,8 @@ def rteList(root_dir):
     return urls
 
 
-toraCache = rteList("http://home.runtimeexception.net/photos/tora")
-lucyCache = rteList("http://home.runtimeexception.net/photos/lucy")
+toraCache = rteList("http://home.runtimeexception.net/photos/tora/")
+lucyCache = rteList("http://home.runtimeexception.net/photos/lucy/")
 
 
 from contextlib import suppress
