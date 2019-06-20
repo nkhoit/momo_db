@@ -75,7 +75,7 @@ def getFilenameFromUrl(url):
 def rteList(root_dir):
     if validators.url(root_dir):
         data = urllib.request.urlopen(root_dir)
-        lines = tora_data.readlines()
+        lines = data.readlines()
         urls = []
 
         for x in lines:
